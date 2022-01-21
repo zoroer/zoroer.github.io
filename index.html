@@ -11,7 +11,7 @@
     <input type="text" v-model="val1" />
     <p>{{val2}}</p>
     <div>{{val2}} test <span>{{val1}}</span></div>
-    <button v-on:click="clickTest">点击更改val1的值</button></button>
+    <button @click="clickTest">点击更改val1的值</button></button>
   </div>
 
   <script>
@@ -51,43 +51,64 @@
      * 渲染dom上应用的vue数据 
      * rootEle 扫描dom内所有子节点，处理包含特殊语法的元素
      */
-    function listDom (rootEle) {  
+    function listDom (rootEle) {
       Array.from(rootEle.children).forEach(ele => {
-        const tagName = ele.tagName.toLowerCase();
-        if (tagName === 'input') {
+        // 自定义属性
+        Array.from(ele.attributes).forEach(attr => {
+          compileDirective(ele, attr);
+        })
+
+        // dom变量
+        const innerDom = ele.innerHTML;
+        ele.innerHTML = compileDom(innerDom);
+        emitUpdateEvent('normalEle', ele, innerDom);
+      });
+    }
+
+    // 处理dom变量值
+    function compileDom(innerDom) {
+      var reg = /{{(.*?)}}/g;
+      return innerDom.replace(reg, (match, $1) => vueData[$1]);
+    }
+
+    // 处理自定义属性
+    function compileDirective (ele, attr) {
+      const attrName = attr.localName;
+      const tagName = ele.tagName.toLowerCase();
+      // v-model指令
+      if (attrName.includes('v-model')) {
+        const inputEleList = ['input', 'textarea'];
+        if (inputEleList.includes(tagName)) {
           var bindAttr = ele.getAttribute('v-model');
           ele.value = vueData[bindAttr];
           ele.addEventListener('input', (e) => {
             const nowVal = e.target.value;
             vueData[bindAttr] = nowVal;
           });
-          window.addEventListener('update', (e) => {
-            ele.value = e.target.data[bindAttr];
-          })
-        } else {
-          const innerDom = ele.innerHTML;
-          ele.innerHTML = compileDom(innerDom);
-          window.addEventListener('update', (e) => {
-            ele.innerHTML = compileDom(innerDom);
-          })
+          emitUpdateEvent('enterEle', ele, bindAttr);
         }
+      } else {}
 
-        // 处理自定义事件
-        Array.from(ele.attributes).forEach(attr => {
-          const attrName = attr.localName;
-          if (attrName.includes('v-on:')) {
-            var eventName = attrName.split(':')[1];
-            var eventHandler = ele.getAttribute(attrName);
-            ele.addEventListener(eventName, window[eventHandler])
-          }
-        })
-      });
+      // 事件
+      const DefineEventTag = ['v-on:', '@']
+      DefineEventTag.forEach(tag => {
+        if (attrName.includes(tag)) {
+          var eventName = attrName.split(tag)[1];
+          var eventHandler = ele.getAttribute(attrName);
+          ele.addEventListener(eventName, window[eventHandler])
+        }
+      })
     }
-    function compileDom(innerDom) {
-      var reg = /{{(.*?)}}/g;
-      return innerDom.replace(reg, (match, $1, $2, $3) => {
-        return vueData[$1];
-      });
+
+    // 触发更新数据
+    function emitUpdateEvent (type, ele, content) {
+      window.addEventListener('update', (e) => {
+        if (type === 'enterEle') {
+          ele.value = e.target.data[content];
+        } else {
+          ele.innerHTML = compileDom(content);
+        }
+      })
     }
 
     function clickTest() {
