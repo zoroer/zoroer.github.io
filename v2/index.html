@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>test</title>
+</head>
+<body>
+  <div id=app>
+    <input type="text" v-model="val1" />
+    <p>{{val2}}</p>
+    <div>{{val2}} test <span>{{val1}}</span></div>
+    <button @click="clickTest">点击更改val1的值</button></button>
+  </div>
+
+  <script>
+    let ProxyIns = {};
+    const  onUpdate = new CustomEvent("update");
+    // api定义
+    let data  = {
+      val1: 1,
+      val2: 2,
+    }
+
+    window.onload = function() {
+      reactData(data)
+      listDom(document.querySelector("#app"))
+    }
+
+    // 拦截数据
+    function reactData(obj) {
+      ProxyIns = new Proxy(obj, {
+        get (target, propKey) {
+          return target[propKey];
+        },
+        set (target, propKey, value) {
+          target[propKey] = value;
+          window.dispatchEvent(onUpdate);
+        }
+      });
+    }
+
+    /*
+     * 渲染dom上应用的vue数据 
+     * rootEle 扫描dom内所有子节点，处理包含特殊语法的元素
+     */
+    function listDom (rootEle) {
+      Array.from(rootEle.children).forEach(ele => {
+        // 自定义属性
+        Array.from(ele.attributes).forEach(attr => {
+          compileDirective(ele, attr);
+        })
+
+        // dom变量
+        const innerDom = ele.innerHTML;
+        ele.innerHTML = compileDom(innerDom);
+        emitUpdateEvent('normalEle', ele, innerDom);
+      });
+    }
+
+    // 处理自定义属性
+    function compileDirective (ele, attr) {
+      const attrName = attr.localName;
+      const tagName = ele.tagName.toLowerCase();
+      // v-model指令
+      if (attrName.includes('v-model')) {
+        const inputEleList = ['input', 'textarea'];
+        if (inputEleList.includes(tagName)) {
+          var bindAttr = ele.getAttribute('v-model');
+          ele.value = ProxyIns[bindAttr];
+          ele.addEventListener('input', (e) => {
+            const nowVal = e.target.value;
+            ProxyIns[bindAttr] = nowVal;
+          });
+          emitUpdateEvent('enterEle', ele, bindAttr);
+        }
+      } else {}
+
+      // 事件
+      const DefineEventTag = ['v-on:', '@']
+      DefineEventTag.forEach(tag => {
+        if (attrName.includes(tag)) {
+          var eventName = attrName.split(tag)[1];
+          var eventHandler = ele.getAttribute(attrName);
+          ele.addEventListener(eventName, window[eventHandler])
+        }
+      })
+    }
+
+    // 触发更新数据
+    function emitUpdateEvent (type, ele, content) {
+      window.addEventListener('update', () => {
+        if (type === 'enterEle') {
+          ele.value = ProxyIns[content];
+        } else {
+          ele.innerHTML = compileDom(content);
+        }
+      })
+    }
+
+    // 处理dom变量值
+    function compileDom(innerDom) {
+      var reg = /{{(.*?)}}/g;
+      return innerDom.replace(reg, (match, $1) => ProxyIns[$1]);
+    }
+
+
+    function clickTest() {
+      ProxyIns.val2 = 11111;
+    }
+  </script>
+</body>
+</html>
