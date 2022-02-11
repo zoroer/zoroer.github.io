@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>promise view</title>
+</head>
+<body>
+
+<script src="./event.js"></script>
+<script type="text/javascript">
+  const Event = new SelfEvent();
+  /**
+   * 优势：解耦函数跟相互关联逻辑的嵌套
+   * Promise 功能点
+   * promise对象参数 函数 函数的参数是2个函数resolve，reject
+   */
+  class SelfPromise {
+    constructor(mainFunc) {
+      this.status = 'pending';
+      this.userVal = {
+        resolveVal: null,
+        rejectVal: null,
+      };
+      this.initCb(mainFunc);
+    }
+    initCb (mainFunc) {
+      if (typeof mainFunc !== 'function') {
+        throw new Error('Promise参数必须为函数');
+      }
+      mainFunc(this.resolveFunction.bind(this), this.rejectFunction.bind(this));
+    }
+    resolveFunction (val) {
+      if (this.status === 'pending') {
+        this.status = 'fulfilled';
+        this.userVal.resolveVal = val;
+        Event.publish('fulfilled');
+      }
+    }
+    rejectFunction (val) {
+      if (this.status === 'pending') {
+        this.status = 'rejected';
+        this.userVal.rejectVal = val;
+        Event.publish('rejected');
+      }
+    }
+    then(resolvedCb, rejectedCb) {
+      Event.subscribe('fulfilled', () => {
+        resolvedCb(this.userVal.resolveVal)
+      })
+      Event.subscribe('rejected', () => {
+        rejectedCb(this.userVal.rejectVal)
+      });
+      return this;
+    }
+    catch(rejectedCb) {
+      Event.subscribe('rejected', () => {
+        rejectedCb(this.userVal.rejectVal)
+      });
+      return this;
+    }
+  }
+
+  const instance = new SelfPromise((resolve, reject) => {
+    setTimeout(function () {
+      resolve('done');
+    }, 3000);
+  });
+
+  instance.then((value) => {
+    console.log(value);
+  });
+</script>
+</body>
+</html>
