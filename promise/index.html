@@ -5,10 +5,18 @@
   <title>promise view</title>
 </head>
 <body>
+  <div id="app">
+    <p>{{changeAfterSeconds}}秒之后加载promise回调</p>
+  </div>
 
 <script src="./event.js"></script>
+<script src="../static/simple_vue.js"></script>
 <script type="text/javascript">
-  const Event = new SelfEvent();
+  // api定义
+  let data  = {
+    changeAfterSeconds: 3,
+  }
+
   /**
    * 优势：解耦函数跟相互关联逻辑的嵌套
    * Promise 功能点
@@ -17,10 +25,6 @@
   class SelfPromise {
     constructor(mainFunc) {
       this.status = 'pending';
-      this.userVal = {
-        resolveVal: null,
-        rejectVal: null,
-      };
       this.initCb(mainFunc);
     }
     initCb (mainFunc) {
@@ -31,43 +35,42 @@
     }
     resolveFunction (val) {
       if (this.status === 'pending') {
-        this.status = 'fulfilled';
-        this.userVal.resolveVal = val;
-        Event.publish('fulfilled');
+        this.changeResolveStatus();
+        Event.publish('resolve', val);
       }
     }
     rejectFunction (val) {
       if (this.status === 'pending') {
-        this.status = 'rejected';
-        this.userVal.rejectVal = val;
-        Event.publish('rejected');
+        this.changeRejectStatus();
+        Event.publish('reject', val);
       }
     }
+    changeResolveStatus () {
+      this.status = 'fulfilled';
+    }
+    changeRejectStatus () {
+      this.status = 'rejected';
+    }
     then(resolvedCb, rejectedCb) {
-      Event.subscribe('fulfilled', () => {
-        resolvedCb(this.userVal.resolveVal)
-      })
-      Event.subscribe('rejected', () => {
-        rejectedCb(this.userVal.rejectVal)
-      });
+      Event.subscribe('resolve', val => resolvedCb(val));
+      Event.subscribe('reject', val => rejectedCb(val));
       return this;
     }
     catch(rejectedCb) {
-      Event.subscribe('rejected', () => {
-        rejectedCb(this.userVal.rejectVal)
-      });
+      Event.subscribe('rejected', val => rejectedCb(val));
       return this;
     }
   }
 
-  const instance = new SelfPromise((resolve, reject) => {
-    setTimeout(function () {
-      resolve('done');
-    }, 3000);
-  });
+  function timeout(ms) {
+    return new SelfPromise((resolve, reject) => {
+      setTimeout(resolve, ms, 'done');
+    });
+  }
 
-  instance.then((value) => {
+  timeout(data.changeAfterSeconds * 1000).then((value) => {
     console.log(value);
+    ProxyIns.changeAfterSeconds = 0;
   });
 </script>
 </body>
