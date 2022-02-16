@@ -5,73 +5,100 @@
   <title>promise view</title>
 </head>
 <body>
-  <div id="app">
-    <p>{{changeAfterSeconds}}秒之后加载promise回调</p>
-  </div>
-
 <script src="./event.js"></script>
-<script src="../static/simple_vue.js"></script>
 <script type="text/javascript">
-  // api定义
-  let data  = {
-    changeAfterSeconds: 3,
-  }
-
   /**
+   * link: https://juejin.cn/post/6844903796129136654#heading-1
    * 优势：解耦函数跟相互关联逻辑的嵌套
    * Promise 功能点
    * promise对象参数 函数 函数的参数是2个函数resolve，reject
+   *
+   * promise状态 status:
+   * 0 pending
+   * 1 fulfilled
+   * 2 rejected
    */
   class SelfPromise {
     constructor(mainFunc) {
-      this.status = 'pending';
+      this.status = 0;
+      this.value = null;
+      this.reason = null;
+      this.Event = new SelfEvent();
       this.initCb(mainFunc);
     }
     initCb (mainFunc) {
       if (typeof mainFunc !== 'function') {
         throw new Error('Promise参数必须为函数');
       }
-      mainFunc(this.resolveFunction.bind(this), this.rejectFunction.bind(this));
+      try {
+        mainFunc(this.resolveFunction.bind(this), this.rejectFunction.bind(this));
+      } catch (err) {
+        this.rejectFunction(err)
+      }
     }
     resolveFunction (val) {
-      if (this.status === 'pending') {
-        this.changeResolveStatus();
-        Event.publish('resolve', val);
+      if (this.status === 0) {
+        this.status = 1;
+        this.value = val;
+        this.Event.publish('resolve', val);
       }
     }
     rejectFunction (val) {
       if (this.status === 'pending') {
-        this.changeRejectStatus();
-        Event.publish('reject', val);
+        this.status = 2;
+        this.reason = val;
+        this.Event.publish('reject', val);
       }
     }
-    changeResolveStatus () {
-      this.status = 'fulfilled';
-    }
-    changeRejectStatus () {
-      this.status = 'rejected';
-    }
     then(resolvedCb, rejectedCb) {
-      Event.subscribe('resolve', val => resolvedCb(val));
-      Event.subscribe('reject', val => rejectedCb(val));
-      return this;
+      resolvedCb = typeof resolvedCb === 'function' ? resolvedCb : val => val;
+      rejectedCb = typeof rejectedCb === 'function' ? rejectedCb : err => { throw err};
+
+      return new Promise((resolved, rejected) => {
+        switch (this.status) {
+          case 0:
+            this.Event.subscribe('resolve', (val) => {
+              setTimeout(() => {
+                resolved(resolvedCb(val));
+              })
+            })
+            this.Event.subscribe('reject', (val) => {
+              setTimeout(() => {
+                rejected(rejectedCb(val));
+              })
+            })
+            break;
+          case 1:
+            setTimeout(() => {
+              resolved(resolvedCb(this.value));
+            })
+            break;
+          case 2:
+            setTimeout(() => {
+              rejected(rejectedCb(this.reason));
+            })
+            break;
+          default:
+            return false;
+        }
+      })
     }
     catch(rejectedCb) {
-      Event.subscribe('rejected', val => rejectedCb(val));
+      this.Event.subscribe('rejected', val => rejectedCb(val));
       return this;
     }
   }
 
-  function timeout(ms) {
-    return new SelfPromise((resolve, reject) => {
-      setTimeout(resolve, ms, 'done');
-    });
-  }
-
-  timeout(data.changeAfterSeconds * 1000).then((value) => {
-    console.log(value);
-    ProxyIns.changeAfterSeconds = 0;
-  });
+  new SelfPromise((resolve, reject) => {
+    setTimeout(resolve, 2000, 1)
+  })
+    .then(val => {
+      return val + 1
+    })
+    .then()
+    .then(val => {
+      console.log(val)
+    })
 </script>
 </body>
 </html>

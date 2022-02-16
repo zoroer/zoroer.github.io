@@ -4,7 +4,7 @@ class SelfEvent{
   }
   publish (type, ...data) {
     this.eventList[type]?.forEach(cb => {
-      cb(...data)
+      cb && typeof cb === 'function' && cb(...data)
     });
   }
   subscribe (type, cb) {
@@ -17,5 +17,5 @@ class SelfEvent{
     if (this.eventList[type]) {
       delete this.eventList[type]
     }
-  } 
+  }
 }
