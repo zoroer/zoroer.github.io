@@ -54,34 +54,54 @@
       resolvedCb = typeof resolvedCb === 'function' ? resolvedCb : val => val;
       rejectedCb = typeof rejectedCb === 'function' ? rejectedCb : err => { throw err};
 
-      return new Promise((resolved, rejected) => {
+      const innerPromise = new Promise((resolved, rejected) => {
         switch (this.status) {
           case 0:
             this.Event.subscribe('resolve', (val) => {
               setTimeout(() => {
-                resolved(resolvedCb(val));
+                this.resolvePromise(innerPromise, resolvedCb(val), resolved, rejected);
               })
             })
             this.Event.subscribe('reject', (val) => {
               setTimeout(() => {
-                rejected(rejectedCb(val));
+                this.resolvePromise(innerPromise, rejectedCb(val), resolved, rejected);
               })
             })
             break;
           case 1:
             setTimeout(() => {
-              resolved(resolvedCb(this.value));
+              this.resolvePromise(innerPromise, resolvedCb(this.value), resolved, rejected);
             })
             break;
           case 2:
             setTimeout(() => {
-              rejected(rejectedCb(this.reason));
+              this.resolvePromise(innerPromise, rejectedCb(this.reason), resolved, rejected);
             })
             break;
           default:
             return false;
         }
       })
+      return innerPromise;
+    }
+    resolvePromise (thenPromiseInstance, returnVal, resolve, reject) {
+      if (returnVal === thenPromiseInstance) {
+        reject(new TypeError('Chaining cycle detected for promise #<Promise>'));
+      } else if (['function', 'object'].includes(typeof returnVal)) {
+        const then = returnVal.then;
+        // returnVal为thenable函数
+        if (typeof then === 'function') {
+          then.call(returnVal, (y) => {
+            this.resolvePromise(thenPromiseInstance, y, resolve, reject);
+          }, (err) => {
+            reject(err)
+          })
+        } else {
+          resolve(returnVal);
+        }
+      } else {
+        resolve(returnVal);
+      }
     }
     catch(rejectedCb) {
       this.Event.subscribe('rejected', val => rejectedCb(val));
@@ -93,9 +113,11 @@
     setTimeout(resolve, 2000, 1)
   })
     .then(val => {
-      return val + 1
+      return new SelfPromise(resolve1 => {
+        console.log(val)
+        setTimeout(resolve1, 1000, 'inner')
+      })
     })
-    .then()
     .then(val => {
       console.log(val)
     })
