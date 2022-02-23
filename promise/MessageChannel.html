@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MessageChannel 异步发送消息的使用</title>
+</head>
+<body>
+
+<script type="text/javascript">
+  /***
+   * MessageChannel处理微任务
+   * @param cb
+   */
+  function asyncMessageChannel(cb) {
+    cb = typeof cb === 'function' ? cb : x => x;
+    const { port1, port2 } = new MessageChannel();
+    port1.onmessage = cb;
+    port2.postMessage(1);
+  }
+
+  function asyncMutationObserver(cb) {
+    cb = typeof cb === 'function' ? cb : x => x;
+    let ele = document.createElement('i');
+    const ob = new MutationObserver(cb)
+    ob.observe(ele, {
+      attributes: true
+    })
+    ele.setAttribute('count', '1');
+  }
+</script>
+</body>
+</html>

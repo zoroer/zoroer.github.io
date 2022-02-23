@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MutationObserver使用以及microtask事件例子</title>
+</head>
+<body>
+<input id="inputEle" type="password" placeholder="enter your password here">
+
+<script type="text/javascript">
+  // MutationObserver 监听dom的变化（这里是属性的变化）来处理一下事情
+  const input = document.querySelector('#inputEle')
+  const observer = new MutationObserver((mutationRecord) => {
+    const { attributeName, target } = mutationRecord[0];
+    if (attributeName === 'type' && input.getAttribute('type') !== 'password') {
+      input.setAttribute('type', 'password');
+    }
+  })
+  observer.observe(input, {
+    attributes: true
+  })
+
+
+  /***
+   * MutationObserver处理微任务
+   * @param cb
+   */
+  function asyncMutationObserver(cb) {
+    cb = typeof cb === 'function' ? cb : x => x;
+    let ele = document.createElement('i');
+    const ob = new MutationObserver(cb)
+    ob.observe(ele, {
+      attributes: true
+    })
+    ele.setAttribute('count', '1');
+  }
+
+  setTimeout(() => {
+    console.log(111)
+  }, 2000)
+
+  asyncMutationObserver(() => {
+    console.log(3333)
+  })
+
+  console.log(2222)
+</script>
+</body>
+</html>
