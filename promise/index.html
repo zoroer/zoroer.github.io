@@ -19,7 +19,7 @@
    * 2 rejected
    */
   class SelfPromise {
-    constructor(mainFunc) {
+    constructor (mainFunc) {
       this.status = 0;
       this.value = null;
       this.reason = null;
@@ -30,6 +30,7 @@
       if (typeof mainFunc !== 'function') {
         throw new Error('Promise参数必须为函数');
       }
+
       try {
         mainFunc(this.resolveFunction.bind(this), this.rejectFunction.bind(this));
       } catch (err) {
@@ -44,45 +45,11 @@
       }
     }
     rejectFunction (val) {
-      if (this.status === 'pending') {
+      if (this.status === 0) {
         this.status = 2;
         this.reason = val;
         this.Event.publish('reject', val);
       }
-    }
-    then(resolvedCb, rejectedCb) {
-      resolvedCb = typeof resolvedCb === 'function' ? resolvedCb : val => val;
-      rejectedCb = typeof rejectedCb === 'function' ? rejectedCb : err => { throw err};
-
-      const innerPromise = new Promise((resolved, rejected) => {
-        switch (this.status) {
-          case 0:
-            this.Event.subscribe('resolve', (val) => {
-              setTimeout(() => {
-                this.resolvePromise(innerPromise, resolvedCb(val), resolved, rejected);
-              })
-            })
-            this.Event.subscribe('reject', (val) => {
-              setTimeout(() => {
-                this.resolvePromise(innerPromise, rejectedCb(val), resolved, rejected);
-              })
-            })
-            break;
-          case 1:
-            setTimeout(() => {
-              this.resolvePromise(innerPromise, resolvedCb(this.value), resolved, rejected);
-            })
-            break;
-          case 2:
-            setTimeout(() => {
-              this.resolvePromise(innerPromise, rejectedCb(this.reason), resolved, rejected);
-            })
-            break;
-          default:
-            return false;
-        }
-      })
-      return innerPromise;
     }
     resolvePromise (thenPromiseInstance, returnVal, resolve, reject) {
       if (returnVal === thenPromiseInstance) {
@@ -103,24 +70,140 @@
         resolve(returnVal);
       }
     }
-    catch(rejectedCb) {
-      this.Event.subscribe('rejected', val => rejectedCb(val));
-      return this;
+    then (resolvedCb, rejectedCb) {
+      resolvedCb = typeof resolvedCb === 'function' ? resolvedCb : val => val;
+      rejectedCb = typeof rejectedCb === 'function' ? rejectedCb : err => { throw err};
+
+      const innerPromise = new Promise((resolved, rejected) => {
+        switch (this.status) {
+          case 0:
+            this.Event.subscribe('resolve', (val) => {
+              // micro事件
+              setTimeout(() => {
+                try {
+                  this.resolvePromise(innerPromise, resolvedCb(val), resolved, rejected);
+                } catch (e) {
+                  rejected(e)
+                }
+              }, 0)
+            })
+            this.Event.subscribe('reject', (val) => {
+              setTimeout(() => {
+                try {
+                  this.resolvePromise(innerPromise, rejectedCb(val), resolved, rejected);
+                } catch (e) {
+                  rejected(e)
+                }
+              }, 0)
+            })
+            break;
+          case 1:
+            setTimeout(() => {
+              try {
+                this.resolvePromise(innerPromise, resolvedCb(this.value), resolved, rejected);
+              } catch (e) {
+                rejected(e)
+                return false;
+              }
+            }, 0)
+            break;
+          case 2:
+            setTimeout(() => {
+              try {
+                this.resolvePromise(innerPromise, rejectedCb(this.reason), resolved, rejected);
+              } catch (e) {
+                rejected(e)
+              }
+            }, 0)
+            break;
+          default:
+            return false;
+        }
+      })
+      return innerPromise;
+    }
+    catch (rejectedCb) {
+      return this.then(null, rejectedCb);
+    }
+    finally (cb) {
+      return this.then((val) => {
+        return SelfPromise.resolve(cb()).then(() => val)
+      }, (err)=> {
+        return SelfPromise.resolve(cb()).then(() => {
+          throw err;
+        })
+      })
+    }
+    static all (promiseArr) {
+      promiseArr = Array.from(promiseArr);
+      let resultTemp = [];
+      let resolveCount = 0;
+      return new SelfPromise((resolve, reject) => {
+        for (let count=0; count<promiseArr.length; count++) {
+          SelfPromise.resolve(promiseArr[count])
+            .then(val => {
+              resolveCount++;
+              resultTemp[count] = val;
+              if (resolveCount === promiseArr.length) {
+                resolve(resultTemp);
+              }
+            })
+            .catch(err => {
+              reject(err);
+            })
+        }
+      })
+    }
+    static race (promiseArr) {
+      promiseArr = Array.from(promiseArr);
+      return new SelfPromise((resolve, reject) => {
+        for (let promiseIns of promiseArr) {
+          SelfPromise.resolve(promiseIns)
+            .then(val => {
+              resolve(val);
+              return true;
+            })
+            .catch(err => {
+              reject(err);
+            })
+        }
+      })
+    }
+    static reject (cb) {
+      return new SelfPromise((resolve, reject) => {
+        SelfPromise.resolve(cb).then(reason => {
+          reject(reason);
+        })
+      })
+    }
+    static resolve (resolveArg) {
+      if (resolveArg instanceof SelfPromise){
+        return resolveArg;
+      }
+      if (typeof resolveArg === 'object') {
+        const then = resolveArg.then;
+        // resolveArg为thenable函数，跟随函数的状态
+        if (typeof then === 'function') {
+          return new SelfPromise((resolve, reject) => {
+            then(resolve, reject);
+          })
+        }
+      } else {
+        return new SelfPromise(resolve => resolve(resolveArg));
+      }
     }
   }
 
-  new SelfPromise((resolve, reject) => {
-    setTimeout(resolve, 2000, 1)
-  })
-    .then(val => {
-      return new SelfPromise(resolve1 => {
-        console.log(val)
-        setTimeout(resolve1, 1000, 'inner')
-      })
-    })
-    .then(val => {
-      console.log(val)
-    })
+  let thenable = {
+    then: function(resolve, reject) {
+      resolve(42);
+    }
+  };
+
+  let p1 = SelfPromise.resolve(thenable);
+  p1.then(function (value) {
+    console.log(value);  // 42
+  });
 </script>
 </body>
 </html>
