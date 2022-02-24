@@ -6,6 +6,7 @@
 </head>
 <body>
 <script src="./event.js"></script>
+<script src="./asap.js"></script>
 <script type="text/javascript">
   /**
    * link: https://juejin.cn/post/6844903796129136654#heading-1
@@ -79,7 +80,7 @@
           case 0:
             this.Event.subscribe('resolve', (val) => {
               // micro事件
-              setTimeout(() => {
+              asap(() => {
                 try {
                   this.resolvePromise(innerPromise, resolvedCb(val), resolved, rejected);
                 } catch (e) {
@@ -88,7 +89,7 @@
               }, 0)
             })
             this.Event.subscribe('reject', (val) => {
-              setTimeout(() => {
+              asap(() => {
                 try {
                   this.resolvePromise(innerPromise, rejectedCb(val), resolved, rejected);
                 } catch (e) {
@@ -98,7 +99,7 @@
             })
             break;
           case 1:
-            setTimeout(() => {
+            asap(() => {
               try {
                 this.resolvePromise(innerPromise, resolvedCb(this.value), resolved, rejected);
               } catch (e) {
@@ -108,7 +109,7 @@
             }, 0)
             break;
           case 2:
-            setTimeout(() => {
+            asap(() => {
               try {
                 this.resolvePromise(innerPromise, rejectedCb(this.reason), resolved, rejected);
               } catch (e) {
@@ -194,16 +195,15 @@
     }
   }
 
-  let thenable = {
-    then: function(resolve, reject) {
-      resolve(42);
-    }
-  };
+  setTimeout(function () {
+    console.log('three');
+  }, 0);
 
-  let p1 = SelfPromise.resolve(thenable);
-  p1.then(function (value) {
-    console.log(value);  // 42
+  SelfPromise.resolve().then(function () {
+    console.log('two');
   });
+
+  console.log('one');
 </script>
 </body>
 </html>
