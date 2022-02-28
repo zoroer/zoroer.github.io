@@ -1,0 +1,23 @@
+{
+  "name": "zoroer.github.io",
+  "version": "1.0.0",
+  "description": "personal page module resources",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "promiseTest": "promises-aplus-tests promise/promise.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://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@github.com/zoroer/zoroer.github.io.git.git"
+  },
+  "author": "zoroer",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zoroer/zoroer.github.io.git/issues"
+  },
+  "homepage": "https://github.com/zoroer/zoroer.github.io.git#readme",
+  "dependencies": {
+    "promises-aplus-tests": "^2.1.2"
+  }
+}
