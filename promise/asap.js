@@ -1,3 +1,4 @@
+let window;
 let handleAsyncFunc = null;
 let asyncFlushCb = null;
 let asyncFlushParams = null;
@@ -36,8 +37,8 @@ function asyncSetTimeout() {
 }
 
 const isNode = window === undefined && typeof process !== undefined
-const canUseMutationObserver = window.MutationObserver !== undefined
-const canUseMessageChannel = window.MessageChannel !== undefined
+const canUseMutationObserver = window?.MutationObserver !== undefined
+const canUseMessageChannel = window?.MessageChannel !== undefined
 if (isNode) {
   handleAsyncFunc = asyncNextTick()
 } else if (canUseMutationObserver) {

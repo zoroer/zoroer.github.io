@@ -9,6 +9,7 @@
 <script src="./asap.js"></script>
 <script type="text/javascript">
   /**
+   * link: https://promisesaplus.com/ Promises/A+规范
    * link: https://juejin.cn/post/6844903796129136654#heading-1
    * 优势：解耦函数跟相互关联逻辑的嵌套
    * Promise 功能点
@@ -192,6 +193,14 @@
       } else {
         return new SelfPromise(resolve => resolve(resolveArg));
       }
+    }
+    static deferred () {
+      let dfd = {};
+      dfd.promise = new SelfPromise((resolve,reject)=>{
+        dfd.resolve = resolve;
+        dfd.reject = reject;
+      })
+      return dfd;
     }
   }
 
