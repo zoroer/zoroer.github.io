@@ -21,22 +21,21 @@ class SelfEvent{
 }
 
 let window;
-let len = 0;
-let queue = [];
+let doneFlush = 0;
+let flush = [];
 let handleAsyncFunc = null;
 
 // 异步回调
 const asyncCallback = () => {
-  for (let i=0; i<len; i+=2) {
-    let callback = queue[i];
-    let arg = queue[i+1];
-
+  for (let i=0; i<doneFlush; i+=2){
+    let callback = flush[i];
+    let arg = flush[i+1];
     callback(arg);
 
-    queue[i] = undefined;
-    queue[i+1] = undefined;
+    flush[i] = undefined;
+    flush[i+1] = undefined;
   }
-  len = 0;
+  doneFlush = 0;
 }
 
 function asyncMutationObserver() {
@@ -80,10 +79,14 @@ if (isNode) {
 
 // 异步入口
 const asap = (cb, arg) => {
-  queue[len] = cb;
-  queue[len + 1] = arg;
-  len += 2;
-  if (len === 2) {
+  flush[doneFlush] = cb;
+  flush[doneFlush+1] = arg;
+
+  doneFlush +=2;
+  console.log('------------------')
+  console.log(doneFlush)
+  console.log('------------------')
+  if (doneFlush === 2) {
     handleAsyncFunc();
   }
 }
