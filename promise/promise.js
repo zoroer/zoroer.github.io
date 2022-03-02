@@ -83,9 +83,6 @@ const asap = (cb, arg) => {
   flush[doneFlush+1] = arg;
 
   doneFlush +=2;
-  console.log('------------------')
-  console.log(doneFlush)
-  console.log('------------------')
   if (doneFlush === 2) {
     handleAsyncFunc();
   }
