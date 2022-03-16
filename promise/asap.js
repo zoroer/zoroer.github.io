@@ -1,4 +1,3 @@
-let window;
 let handleAsyncFunc = null;
 let asyncFlushCb = null;
 let asyncFlushParams = null;

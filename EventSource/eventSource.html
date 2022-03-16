@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>eventSource</title>
+</head>
+<body>
+
+<script type="text/javascript">
+  let ES = new EventSource('http://127.0.0.1:7001/sendMes')
+
+  // 监听自定义事件
+  ES.addEventListener('mes', (e) => {
+    const { foo, baz } = JSON.parse(e.data);
+    console.log('mes', foo);
+    console.log('mes', baz);
+  });
+
+  // 监听默认的事件
+  ES.addEventListener('message', (e) => {
+    const { foo, baz } = JSON.parse(e.data);
+    console.log('mes', foo);
+    console.log('mes', baz);
+  })
+
+  // 建立连接
+  ES.onopen = (e) => {
+    console.log('open', e)
+    console.log("The connection has been established.");
+  }
+
+  // 链接error
+  ES.onerror = (e) => {
+    console.log('error', e)
+    console.log("An error occurred while attempting to connect.")
+  }
+</script>
+</body>
+</html>
