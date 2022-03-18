@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>web worker</title>
+</head>
+<body>
+  <input type="text" class="enter" />
+  <p class="result"></p>
+
+  <script type="text/javascript">
+    const worker = new Worker('newWorker.js')
+    worker.onmessage = (e) => {
+      document.querySelector('.result').innerHTML = e.data
+    }
+
+    document.querySelector('.enter').addEventListener('input', (e) => {
+      document.querySelector('.result').innerHTML = 'calculating the result...'
+      worker.postMessage({
+        value: Number(e.target.value)
+      })
+    });
+  </script>
+</body>
+</html>
