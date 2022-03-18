@@ -9,7 +9,7 @@
   <p class="result"></p>
 
   <script type="text/javascript">
-    const worker = new Worker('newWorker.js')
+    const worker = new Worker('./newWorker.js')
     worker.onmessage = (e) => {
       document.querySelector('.result').innerHTML = e.data
     }
