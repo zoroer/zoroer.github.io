@@ -1,9 +1,9 @@
 console.log(self)
 
-onmessage = (e) => {
+self.onmessage = (e) => {
   let temp = e.data.value
   console.log('worker received data is ' + temp)
-  setTimeout(() => {
-    postMessage(temp + 10)
+  self.setTimeout(() => {
+    self.postMessage(temp + 10)
   }, 3000)
 }
